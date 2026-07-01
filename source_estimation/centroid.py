@@ -18,15 +18,15 @@ GREENHOUSE_LENGTH = 10.01 # y-axis (meters)
 # Default Sensor Layout and Spore Counts (C_i)
 # Coordinates are in meters relative to the bottom-left corner of the house (0, 0)
 DEFAULT_SENSORS = [
-    {"id": "B", "name": "Top-Left (左上)", "x":1.37 , "y": GREENHOUSE_LENGTH - 2.25, "spore_count": 5},
-    {"id": "D", "name": "Top-Right (右上)", "x": GREENHOUSE_WIDTH - 1.68, "y": GREENHOUSE_LENGTH - 2.25, "spore_count": 7},
-    {"id": "E", "name": "Center (真ん中)", "x":3.22, "y":5.57, "spore_count": 2},
-    {"id": "A", "name": "Bottom-Left (左下)", "x": 1.37, "y": 2.41, "spore_count": 7},
-    {"id": "C", "name": "Bottom-Right (右下)", "x": GREENHOUSE_WIDTH - 1.68, "y": 2.41, "spore_count": 15},
+    {"id": "A", "name": "Bottom-Left (左下)", "x": 1.45, "y": 2.52, "spore_count": 14},
+    {"id": "B", "name": "Top-Left (左上)", "x":1.45 , "y": GREENHOUSE_LENGTH - 2.36, "spore_count": 9},
+    {"id": "C", "name": "Bottom-Right (右下)", "x": GREENHOUSE_WIDTH - 1.76, "y": 2.52, "spore_count": 8},
+    {"id": "D", "name": "Top-Right (右上)", "x": GREENHOUSE_WIDTH - 1.76, "y": GREENHOUSE_LENGTH - 2.36, "spore_count": 12},
+    {"id": "E", "name": "Center (真ん中)", "x":2.97, "y":5.68, "spore_count": 16},
 ]
 
 # True Infection Source (for comparison/validation)
-TRUE_SOURCE = {"x": GREENHOUSE_WIDTH/2, "y": GREENHOUSE_LENGTH/2}
+TRUE_SOURCE = {"x": 3.23, "y": 5.50}
 
 
 def estimate_source(sensors):
