@@ -10,6 +10,8 @@ based on air spore count measurements at multiple sensor locations.
 import os
 import argparse
 import matplotlib.pyplot as plt
+import csv
+import pprint
 
 # Greenhouse Dimensions (default config)
 GREENHOUSE_WIDTH = 6.28   # x-axis (meters)
@@ -17,12 +19,12 @@ GREENHOUSE_LENGTH = 10.01 # y-axis (meters)
 
 # Default Sensor Layout and Spore Counts (C_i)
 # Coordinates are in meters relative to the bottom-left corner of the house (0, 0)
-DEFAULT_SENSORS = [
-    {"id": "A", "name": "Bottom-Left (左下)", "x": 1.45, "y": 2.52, "spore_count": 14},
-    {"id": "B", "name": "Top-Left (左上)", "x":1.45 , "y": GREENHOUSE_LENGTH - 2.36, "spore_count": 9},
-    {"id": "C", "name": "Bottom-Right (右下)", "x": GREENHOUSE_WIDTH - 1.76, "y": 2.52, "spore_count": 8},
-    {"id": "D", "name": "Top-Right (右上)", "x": GREENHOUSE_WIDTH - 1.76, "y": GREENHOUSE_LENGTH - 2.36, "spore_count": 12},
-    {"id": "E", "name": "Center (真ん中)", "x":2.97, "y":5.68, "spore_count": 16},
+SENSORS = [
+    {"id": "A", "name": "Bottom-Left (左下)", "x": 1.45, "y": 2.52, "spore_count": 0},
+    {"id": "B", "name": "Top-Left (左上)", "x":1.45 , "y": GREENHOUSE_LENGTH - 2.36, "spore_count": 0},
+    {"id": "C", "name": "Bottom-Right (右下)", "x": GREENHOUSE_WIDTH - 1.76, "y": 2.52, "spore_count": 0},
+    {"id": "D", "name": "Top-Right (右上)", "x": GREENHOUSE_WIDTH - 1.76, "y": GREENHOUSE_LENGTH - 2.36, "spore_count": 0},
+    {"id": "E", "name": "Center (真ん中)", "x":2.97, "y":5.68, "spore_count": 0},
 ]
 
 # True Infection Source (for comparison/validation)
@@ -105,7 +107,7 @@ def plot_simulation(width, length, sensors, est_x, est_y, true_x, true_y, save_p
         
     plt.close()
 
-
+#そのうち発生源を予測するクラスとしてmain関数を別に実装するといい？？
 def main():
     parser = argparse.ArgumentParser(description="Infection Source Estimation")
     parser.add_argument("--output-plot", type=str, default=None, help="Path to save the generated visualization plot")
@@ -114,35 +116,60 @@ def main():
     print("=== Powdery Mildew Infection Source Estimation (Centroid Method) ===")
     print(f"Greenhouse Dimensions: {GREENHOUSE_WIDTH}m (Width) x {GREENHOUSE_LENGTH}m (Length)")
     print(f"True Infection Source Coordinate: ({TRUE_SOURCE['x']}, {TRUE_SOURCE['y']})")
-    print("\n--- Sensor Configurations ---")
-    for s in DEFAULT_SENSORS:
-        print(f"Sensor {s['id']} [{s['name']}]: Location=({s['x']}, {s['y']}), Spore Count={s['spore_count']}")
+   
+    #胞子数をcsvから読み込む
+    csv_path = "/Users/otsukiyuzan/DetectPowderyMildow/spore_num/num_of_spore.csv" #パスは使用する環境によって変えてください
+    with open(csv_path) as f:
+        reader = csv.reader(f)
+
         
-    try:
-        est_x, est_y, total_c = estimate_source(DEFAULT_SENSORS)
-        error_distance = ((TRUE_SOURCE["x"] - est_x)**2 + (TRUE_SOURCE["y"] - est_y)**2)**0.5
-        
-        print("\n--- Estimation Results ---")
-        print(f"Total Spore Count: {total_c}")
-        print(f"Estimated Infection Source Coordinate: ({est_x:.3f}, {est_y:.3f})")
-        print(f"True Infection Source Coordinate: ({TRUE_SOURCE['x']:.3f}, {TRUE_SOURCE['y']:.3f})")
-        print(f"Estimation Error Distance: {error_distance:.3f} meters")
-        
-        # Plot if requested
-        if args.output_plot:
-            plot_simulation(
-                GREENHOUSE_WIDTH, 
-                GREENHOUSE_LENGTH, 
-                DEFAULT_SENSORS, 
-                est_x, 
-                est_y, 
-                TRUE_SOURCE["x"], 
-                TRUE_SOURCE["y"], 
-                save_path=args.output_plot
-            )
+        # 全ての日を処理する繰り返し
+        for row in reader:
+            print("day: ", row[0], "---num---")
+            #一日分の胞子数をSENSEORSに追加する
+            if row[1].isdecimal(): #最初の行は文字なので飛ばす
+                #胞子数.リストの2行目~ 2列から5列, 要素を取り出す #charからintに変換
+                
+                for column in range(1, 6):
+                    #print(column, end="")
+                    print(int(row[column]), end=" ")
+                    #SENSEORSに入れる
+                    SENSORS[column-1]["spore_count"] = int(row[column])
+                print()
+
+
+            #SENSORSの情報をprint
+            print("\n--- Sensor Configurations ---")
+            for s in SENSORS:
+                print(f"Sensor {s['id']} [{s['name']}]: Location=({s['x']}, {s['y']}), Spore Count={s['spore_count']}")
             
-    except ValueError as e:
-        print(f"\n[Error] {e}")
+            #FIXME 次ここから 全てのセンサの組み合わせで発生源推定を行う．
+            try:
+                est_x, est_y, total_c = estimate_source(SENSORS)
+                error_distance = ((TRUE_SOURCE["x"] - est_x)**2 + (TRUE_SOURCE["y"] - est_y)**2)**0.5
+                
+                print("\n--- Estimation Results ---")
+                print(f"Total Spore Count: {total_c}")
+                print(f"Estimated Infection Source Coordinate: ({est_x:.3f}, {est_y:.3f})")
+                print(f"True Infection Source Coordinate: ({TRUE_SOURCE['x']:.3f}, {TRUE_SOURCE['y']:.3f})")
+                print(f"Estimation Error Distance: {error_distance:.3f} meters")
+                
+                # Plot if requested
+                if args.output_plot:
+                    plot_simulation(
+                        GREENHOUSE_WIDTH, 
+                        GREENHOUSE_LENGTH, 
+                        SENSORS, 
+                        est_x, 
+                        est_y, 
+                        TRUE_SOURCE["x"], 
+                        TRUE_SOURCE["y"], 
+                        #FIXME DetectPowderyMildew/estimated_source/に日付.pngで保存したい．日付はrow[0]
+                        save_path=args.output_plot 
+                    )
+                    
+            except ValueError as e:
+                print(f"\n[Error] {e}")
 
 
 if __name__ == "__main__":
