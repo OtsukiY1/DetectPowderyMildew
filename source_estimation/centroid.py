@@ -12,6 +12,7 @@ import argparse
 import matplotlib.pyplot as plt
 import csv
 import pprint
+from DataPointCombination import DataPointCombination
 
 # Greenhouse Dimensions (default config)
 GREENHOUSE_WIDTH = 6.28   # x-axis (meters)
@@ -109,52 +110,57 @@ def plot_simulation(width, length, sensors, est_x, est_y, true_x, true_y, save_p
 
 #そのうち発生源を予測するクラスとしてmain関数を別に実装するといい？？
 def main():
-    parser = argparse.ArgumentParser(description="Infection Source Estimation")
-    parser.add_argument("--output-plot", type=str, default=None, help="Path to save the generated visualization plot")
-    args = parser.parse_args()
+    parser = argparse.ArgumentParser(description="Infection Source Estimation") #コマンドライン引数argsのパーサをつくる
+    parser.add_argument("--output-plot", type=str, default=None, help="Path to save the generated visualization plot")# オプション引数を追加
+    args = parser.parse_args() #引数を解析
     
     print("=== Powdery Mildew Infection Source Estimation (Centroid Method) ===")
     print(f"Greenhouse Dimensions: {GREENHOUSE_WIDTH}m (Width) x {GREENHOUSE_LENGTH}m (Length)")
     print(f"True Infection Source Coordinate: ({TRUE_SOURCE['x']}, {TRUE_SOURCE['y']})")
    
-    #胞子数をcsvから読み込む
-    csv_path = "/Users/otsukiyuzan/DetectPowderyMildow/spore_num/num_of_spore.csv" #パスは使用する環境によって変えてください
+    # 胞子数をcsvから読み込む
+    csv_path = "spore_num/num_of_spore.csv"
     with open(csv_path) as f:
         reader = csv.reader(f)
-
+        
+        # ヘッダー行を読み飛ばす
+        next(reader)
+        
+        dp_comb = DataPointCombination()
+        combinations = dp_comb.get_combinations()
         
         # 全ての日を処理する繰り返し
         for row in reader:
-            print("day: ", row[0], "---num---")
-            #一日分の胞子数をSENSEORSに追加する
-            if row[1].isdecimal(): #最初の行は文字なので飛ばす
-                #胞子数.リストの2行目~ 2列から5列, 要素を取り出す #charからintに変換
-                
-                for column in range(1, 6):
-                    #print(column, end="")
-                    print(int(row[column]), end=" ")
-                    #SENSEORSに入れる
-                    SENSORS[column-1]["spore_count"] = int(row[column])
-                print()
-
-
-            #SENSORSの情報をprint
-            print("\n--- Sensor Configurations ---")
+            if not row:
+                continue
+            
+            day = row[0]
+            print(f"\n=== Day: {day} ===")
+            
+            # 一日分の胞子数をSENSORSに追加する
+            for column in range(1, 6):
+                SENSORS[column-1]["spore_count"] = int(row[column])
+            
+            # SENSORSの情報をprint
+            print("--- Sensor Configurations ---")
             for s in SENSORS:
                 print(f"Sensor {s['id']} [{s['name']}]: Location=({s['x']}, {s['y']}), Spore Count={s['spore_count']}")
             
-            #FIXME 次ここから 全てのセンサの組み合わせで発生源推定を行う．
-            try:
-                est_x, est_y, total_c = estimate_source(SENSORS)
-                error_distance = ((TRUE_SOURCE["x"] - est_x)**2 + (TRUE_SOURCE["y"] - est_y)**2)**0.5
+            # 全てのセンサの組み合わせで発生源推定を行う
+            print("\n--- Estimation Results by Sensor Combinations ---")
+            for comb in combinations:
+                selected_sensors = [s for s in SENSORS if s["id"] in comb]
+                comb_name = "-".join(comb)
                 
-                print("\n--- Estimation Results ---")
-                print(f"Total Spore Count: {total_c}")
-                print(f"Estimated Infection Source Coordinate: ({est_x:.3f}, {est_y:.3f})")
-                print(f"True Infection Source Coordinate: ({TRUE_SOURCE['x']:.3f}, {TRUE_SOURCE['y']:.3f})")
-                print(f"Estimation Error Distance: {error_distance:.3f} meters")
+                try:
+                    est_x, est_y, total_c = estimate_source(selected_sensors)
+                    error_distance = ((TRUE_SOURCE["x"] - est_x)**2 + (TRUE_SOURCE["y"] - est_y)**2)**0.5
+                    print(f"Comb: {comb_name:<12} | Total Spore: {total_c:<3} | Est: ({est_x:.3f}, {est_y:.3f}) | Error: {error_distance:.3f}m")
+                except ValueError as e:
+                    # 合計胞子数が0の場合は推定不可
+                    print(f"Comb: {comb_name:<12} | Skip: {e}")
                 
-                # Plot if requested
+                #もしコマンドライン引数が--output-plotなら画像を保存する
                 if args.output_plot:
                     plot_simulation(
                         GREENHOUSE_WIDTH, 
@@ -164,12 +170,15 @@ def main():
                         est_y, 
                         TRUE_SOURCE["x"], 
                         TRUE_SOURCE["y"], 
-                        #FIXME DetectPowderyMildew/estimated_source/に日付.pngで保存したい．日付はrow[0]
-                        save_path=args.output_plot 
+                        save_path = "estimated_source/" + day + "/" + comb_name + ".png"
                     )
-                    
-            except ValueError as e:
-                print(f"\n[Error] {e}")
+
+                #以下，誤差の距離を統計分析する
+                #平均
+                
+                #分散
+
+                #95percent Error Radius
 
 
 if __name__ == "__main__":
