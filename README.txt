@@ -7,7 +7,8 @@ pythonを実行すると自動生成し，コンパイルされたモジュー�
 
 
 ## 実行方法とプログラムの説明
-全てのプログラムはプロジェクトファイル(DetectPowderyMildew)に移動してから行ってください。
+全てのプログラムはプロジェクトファイル(DetectPowderyMildew)に移動し、
+source venv/bin/activateで仮想環境を起動してから実行してください。
 
 ### source_estimation/centroid.py
 重心法で感染源を求める．
