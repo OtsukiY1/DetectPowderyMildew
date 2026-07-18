@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import csv
 import pprint
 from DataPointCombination import DataPointCombination
+from ErroAnalyzer import ErrorAnalyzer
 
 # Greenhouse Dimensions (default config)
 GREENHOUSE_WIDTH = 6.28   # x-axis (meters)
@@ -52,7 +53,7 @@ def estimate_source(sensors):
     return x_s, y_s, total_spore_count
 
 
-def plot_simulation(width, length, sensors, est_x, est_y, true_x, true_y, save_path=None):
+def plot_simulation(day, comb, width, length, sensors, est_x, est_y, true_x, true_y, save_path=None):
     """
     Generate a 2D layout plot of the greenhouse, sensors, true source, and estimated source.
     """
@@ -89,7 +90,7 @@ def plot_simulation(width, length, sensors, est_x, est_y, true_x, true_y, save_p
     plt.plot([true_x, est_x], [true_y, est_y], 'b--', linewidth=1.5, label=f"Error Distance: {((true_x - est_x)**2 + (true_y - est_y)**2)**0.5:.2f}m")
     
     # Formatting
-    plt.title("Powdery Mildew Source Estimation (Centroid Method)", fontsize=12, pad=15)
+    plt.title("Powdery Mildew Source Estimation (Centroid Method)" + "\n" + f"{day, ', comb: ', comb}" , fontsize=12, pad=15)
     plt.xlabel("Width (m)", fontsize=10)
     plt.ylabel("Length (m)", fontsize=10)
     plt.xlim(-1, width + 1)
@@ -108,60 +109,7 @@ def plot_simulation(width, length, sensors, est_x, est_y, true_x, true_y, save_p
         
     plt.close()
 
-#そのうち発生源を予測するクラスとしてmain関数を別に実装するといい？？
-def print_error_table(days, combinations, error_list):
-    """
-    誤差の結果を組み合わせ別に表形式で出力する。
-    また、各組み合わせの平均誤差も計算して表示する。
-    """
-    print("\n=== Error Table (Row: Day, Column: Combination) ===")
-    comb_names = ["-".join(comb) for comb in combinations]
-    
-    # ヘッダー（組み合わせ名）を出力
-    header = f"{'Date':<12} | " + " | ".join([f"{name:^8}" for name in comb_names])
-    print(header)
-    print("-" * len(header))
-    
-    # 各日付の誤差データを整形して出力
-    for i, day in enumerate(days):
-        row_errors = error_list[i]
-        formatted_row = []
-        for err in row_errors:
-            if err is None:
-                formatted_row.append(f"{'N/A':^8}")
-            else:
-                formatted_row.append(f"{err:^8.3f}")
-        print(f"{day:<12} | " + " | ".join(formatted_row))
-        
-    print("-" * len(header))
-    
-    # 組み合わせごとに平均（Average）を計算する
-    average_errors = []
-    num_combinations = len(combinations)
-    
-    for col_idx in range(num_combinations):
-        valid_errors = [
-            error_list[row_idx][col_idx] 
-            for row_idx in range(len(days)) 
-            if error_list[row_idx][col_idx] is not None
-        ]
-        
-        if valid_errors:
-            avg = sum(valid_errors) / len(valid_errors)
-        else:
-            avg = None
-        average_errors.append(avg)
-        
-    # 平均値を出力
-    formatted_avg = []
-    for avg in average_errors:
-        if avg is None:
-            formatted_avg.append(f"{'N/A':^8}")
-        else:
-            formatted_avg.append(f"{avg:^8.3f}")
-    print(f"{'Average':<12} | " + " | ".join(formatted_avg))
-
-
+#そのうちcentroidクラスを別ファイルにして，このファイルはmain関数だけのクラスにするといい？？
 def main():
     parser = argparse.ArgumentParser(description="Infection Source Estimation") #コマンドライン引数argsのパーサをつくる
     parser.add_argument("--output-plot", type=str, default=None, help="Path to save the generated visualization plot")# オプション引数を追加
@@ -220,8 +168,10 @@ def main():
                     day_errors.append(error_distance)
                     
                     #もしコマンドライン引数が--output-plotなら画像を保存する
-                    if args.output_plot:
+                    if args.output_plot: #ハイフンは使えないのでアンダーバーを使う．
                         plot_simulation(
+                            day,
+                            comb, 
                             GREENHOUSE_WIDTH, 
                             GREENHOUSE_LENGTH, 
                             selected_sensors, 
@@ -241,10 +191,8 @@ def main():
 
         
         #以下，誤差の距離を統計分析する
-        print_error_table(days, combinations, error_list)
-            
-        #print("\nerror_list (raw data):")
-        #print(*error_list, sep="\n")
+        analyzer = ErrorAnalyzer(days, combinations, error_list)
+        analyzer.print_table()
 
 
 if __name__ == "__main__":
